@@ -17,10 +17,7 @@ import publishDueResults from "./utils/publishDueResults.js";
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "https://result-update-tmuy.onrender.com",
-    ],
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
