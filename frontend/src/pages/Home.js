@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -6,10 +7,28 @@ import {
   ChartNoAxesCombined,
   RefreshCw,
   MessageCircle,
+  Clock3,
+  Users,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import ResultCard from "../components/ResultCard";
 import api from "../services/api";
+
+const khaiwalLocations = [
+  { name: "अलीगढ़ सिटी", time: "12:50 PM" },
+  { name: "दिल्ली सवेरा", time: "2:00 PM" },
+  { name: "ग्वालियर", time: "2:20 PM" },
+  { name: "दिल्ली बाजार", time: "2:50 PM" },
+  { name: "दिल्ली मटका", time: "3:20 PM" },
+  { name: "श्री गणेश", time: "4:20 PM" },
+  { name: "आगरा", time: "5:20 PM" },
+  { name: "फरीदाबाद", time: "5:50 PM" },
+  { name: "लाल मीनार", time: "7:00 PM" },
+  { name: "अलवर", time: "7:20 PM" },
+  { name: "कानपुर सिटी", time: "8:10 PM" },
+  { name: "गाज़ियाबाद", time: "9:20 PM" },
+  { name: "स टारका", time: "10:20 PM" },
+];
 
 function Home() {
   const [currentResults, setCurrentResults] = useState([]);
@@ -66,7 +85,6 @@ function Home() {
   useEffect(() => {
     loadResults();
 
-    // Keep the public page updated when the database changes.
     const intervalId = window.setInterval(loadResults, 30000);
 
     return () => window.clearInterval(intervalId);
@@ -74,54 +92,9 @@ function Home() {
 
   return (
     <div className="min-h-screen">
-      <section className="relative overflow-hidden bg-slate-950">
-        <div className="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
-        <div className="absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl" />
+     
 
-        <div className="page-container relative py-16 sm:py-24">
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="max-w-3xl"
-          >
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-blue-300">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-              Results dashboard
-            </span>
-
-            <h1 className="mt-6 text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-6xl">
-              Your results.
-              <span className="block text-blue-400">
-                Clear and up to date.
-              </span>
-            </h1>
-
-            <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-              Check the latest published result, see which locations are
-              waiting, and explore previous monthly results in one place.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                to="/results"
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-blue-500"
-              >
-                Explore Results <ArrowRight size={17} />
-              </Link>
-
-              <Link
-                to="/monthly"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-white/10"
-              >
-                <ChartNoAxesCombined size={17} />
-                Monthly History
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
+      {/* CURRENT RESULTS FIRST */}
       <section className="page-container py-12 sm:py-16">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -129,10 +102,10 @@ function Home() {
               Live dashboard
             </p>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">
-              Current results
+              Current Results
             </h2>
             <p className="mt-2 text-sm text-slate-500">
-              Latest published numbers by location.
+              Latest published results by location.
             </p>
           </div>
 
@@ -165,13 +138,13 @@ function Home() {
             Loading current results...
           </div>
         ) : (
-          <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-7 grid grid-cols-1 gap-5 md:grid-cols-2">
             {currentResults.map((result, index) => (
               <motion.div
                 key={result.id}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.08 }}
+                transition={{ delay: index * 0.06 }}
               >
                 <ResultCard result={result} type="current" />
               </motion.div>
@@ -189,6 +162,7 @@ function Home() {
         )}
       </section>
 
+      {/* WAITING RESULTS */}
       <section className="page-container pb-14">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -196,10 +170,10 @@ function Home() {
               Upcoming updates
             </p>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">
-              Next results
+              Next Results
             </h2>
             <p className="mt-2 text-sm text-slate-500">
-              Location and waiting status only. No number is displayed.
+              Waiting locations are shown without their unpublished numbers.
             </p>
           </div>
 
@@ -214,13 +188,13 @@ function Home() {
             Loading waiting results...
           </div>
         ) : (
-          <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-7 grid grid-cols-1 gap-5 md:grid-cols-2">
             {waitingResults.map((result, index) => (
               <motion.div
                 key={result.id}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.08 }}
+                transition={{ delay: index * 0.06 }}
               >
                 <ResultCard result={result} type="waiting" />
               </motion.div>
@@ -238,6 +212,76 @@ function Home() {
         )}
       </section>
 
+      {/* KHAIWAL TABLE */}
+      <section className="page-container pb-14">
+        <div className="mb-6">
+          <p className="text-sm font-bold uppercase tracking-[0.16em] text-emerald-700">
+            Location schedule
+          </p>
+          <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">
+            खाईवाल
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Online khaiwal · SYAM BHAI KHAIWAL
+          </p>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft">
+          <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+              <Users size={21} />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-900">
+                SYAM BHAI KHAIWAL
+              </h3>
+              <p className="text-xs text-slate-500">Location & timing list</p>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[320px] text-left">
+              <thead className="bg-white">
+                <tr className="border-b border-slate-200">
+                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    S.No.
+                  </th>
+                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Location
+                  </th>
+                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Time
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100">
+                {khaiwalLocations.map((item, index) => (
+                  <tr
+                    key={item.name}
+                    className="transition hover:bg-emerald-50/50"
+                  >
+                    <td className="px-5 py-4 text-sm font-semibold text-slate-400">
+                      {String(index + 1).padStart(2, "0")}
+                    </td>
+                    <td className="px-5 py-4 text-base font-bold text-slate-900">
+                      {item.name}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">
+                        <Clock3 size={15} />
+                        {item.time}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* WHATSAPP */}
       <section className="page-container pb-12">
         <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-soft sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -257,7 +301,7 @@ function Home() {
             </div>
 
             <a
-              href="https://wa.me/9518034922"
+              href="https://wa.me/"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
@@ -268,6 +312,7 @@ function Home() {
           </div>
         </div>
       </section>
+      
     </div>
   );
 }

@@ -8,7 +8,7 @@ function Navbar() {
 
   const links = [
     { name: "Home", path: "/" },
-    { name: "All Results", path: "/results" },
+    { name: "All Results", path: "/" },
     { name: "Monthly Chart", path: "/monthly" },
   ];
 

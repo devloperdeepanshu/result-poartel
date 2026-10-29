@@ -1,227 +1,387 @@
 
-import { useMemo, useState } from "react";
-import { CalendarDays, Search, Clock3, History } from "lucide-react";
-
-const demoResults = [
-  { id: 1, location: "DISAWAR", time: "5:35 AM", previous: "34", current: "50" },
-  { id: 2, location: "SADAR BAZAR", time: "1:40 PM", previous: "01", current: "54" },
-  { id: 3, location: "Delhi Swera", time: "1:50 PM", previous: "34", current: "43" },
-  { id: 4, location: "GWALIOR", time: "2:40 PM", previous: "61", current: "77" },
-  { id: 5, location: "DELHI BAZAR", time: "3:15 PM", previous: "91", current: "74" },
-  { id: 6, location: "DELHI MATKA", time: "3:45 PM", previous: "86", current: "18" },
-  { id: 7, location: "SHRI GANESH", time: "4:40 PM", previous: "06", current: "69" },
-  { id: 8, location: "Agra", time: "5:35 PM", previous: "88", current: "97" },
-  { id: 9, location: "FARIDABAD", time: "6:10 PM", previous: "17", current: null },
-  { id: 10, location: "LALMINAR", time: "7:00 PM", previous: "61", current: null },
-  { id: 11, location: "ALWAR", time: "7:43 PM", previous: "28", current: null },
-  { id: 12, location: "GAZIYABAD", time: "9:50 PM", previous: "26", current: null },
-  { id: 13, location: "DWARKA", time: "10:35 PM", previous: "31", current: null },
-  { id: 14, location: "GALI", time: "11:50 PM", previous: "40", current: null },
-];
+import { useEffect, useMemo, useState } from "react";
+import {
+  CalendarDays,
+  Search,
+  Clock3,
+  History,
+  RefreshCw,
+  AlertCircle,
+} from "lucide-react";
+import api from "../services/api";
 
 function MonthlyHistory() {
-  const [year, setYear] = useState(String(new Date().getFullYear()));
-  const [month, setMonth] = useState("all");
-  const [search, setSearch] = useState("");
+  const today = new Date();
 
-  const results = useMemo(() => {
-    return demoResults.filter((item) =>
-      item.location.toLowerCase().includes(search.toLowerCase())
+  const [month, setMonth] = useState(today.getMonth() + 1);
+  const [year, setYear] = useState(today.getFullYear());
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchHistory() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await api.get("/results/history", {
+          params: { month, year },
+        });
+
+        if (!response.data?.success) {
+          throw new Error(
+            response.data?.message || "Unable to load monthly history."
+          );
+        }
+
+        if (!cancelled) {
+          setResults(
+            Array.isArray(response.data.history)
+              ? response.data.history
+              : []
+          );
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setResults([]);
+          setError(
+            err.response?.data?.message ||
+              err.message ||
+              "Failed to load results. Please try again."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [month, year]);
+
+  const filteredResults = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return results.filter((result) =>
+      (result.location?.name || "").toLowerCase().includes(query)
     );
-  }, [search]);
+  }, [results, search]);
+
+  const groupedResults = useMemo(() => {
+    const groups = new Map();
+
+    for (const result of filteredResults) {
+      const locationId =
+        result.location?.id || result.location?.name || "unknown";
+
+      if (!groups.has(locationId)) {
+        groups.set(locationId, {
+          id: locationId,
+          location: result.location?.name || "Unknown Location",
+          results: [],
+        });
+      }
+
+      groups.get(locationId).results.push(result);
+    }
+
+    return Array.from(groups.values()).map((group) => {
+      const sorted = [...group.results].sort(
+        (a, b) =>
+          new Date(b.publishedAt).getTime() -
+          new Date(a.publishedAt).getTime()
+      );
+
+      return {
+        ...group,
+        latest: sorted[0] || null,
+        previous: sorted[1] || null,
+        total: sorted.length,
+      };
+    });
+  }, [filteredResults]);
+
+  function formatTime(dateValue) {
+    if (!dateValue) return "--";
+
+    const date = new Date(dateValue);
+
+    if (Number.isNaN(date.getTime())) return "--";
+
+    return date.toLocaleTimeString("en-IN", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  }
+
+  function formatDate(dateValue) {
+    if (!dateValue) return "--";
+
+    const date = new Date(dateValue);
+
+    if (Number.isNaN(date.getTime())) return "--";
+
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
+  const monthOptions = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <section className="bg-slate-950 text-white">
-        <div className="page-container py-10 sm:py-14">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600">
-              <History size={24} />
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300">
-                Results archive
-              </p>
-              <h1 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Monthly Results
-              </h1>
-            </div>
+    <section className="page-container py-8">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-indigo-600">
+            <History size={17} />
+            Result Archive
           </div>
 
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-            View previous and published results by location. Unpublished
-            results remain marked as waiting without revealing their numbers.
+          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+            Monthly History
+          </h1>
+
+          <p className="mt-2 text-sm text-gray-500">
+            Browse previously published results by month and location.
           </p>
         </div>
-      </section>
 
-      <div className="page-container py-8 sm:py-10">
-        <div className="mb-6 grid gap-4 sm:grid-cols-3">
-          <label className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
-            <span className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
-              <CalendarDays size={15} className="text-blue-600" />
-              Year
-            </span>
-            <select
-              value={year}
-              onChange={(event) => setYear(event.target.value)}
-              className="w-full bg-transparent text-lg font-bold text-slate-900 outline-none"
-            >
-              {[2024, 2025, 2026, 2027].map((value) => (
-                <option key={value} value={String(value)}>
-                  {value}
-                </option>
-              ))}
-            </select>
+        <div className="flex items-center gap-2 self-start rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+          <CalendarDays size={19} className="text-indigo-600" />
+          <span className="text-sm font-medium text-gray-700">
+            {monthOptions[month - 1]} {year}
+          </span>
+        </div>
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:grid-cols-3">
+        <div>
+          <label
+            htmlFor="history-month"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
+            Select month
           </label>
 
-          <label className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
-            <span className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
-              <CalendarDays size={15} className="text-blue-600" />
-              Month
-            </span>
-            <select
-              value={month}
-              onChange={(event) => setMonth(event.target.value)}
-              className="w-full bg-transparent text-lg font-bold text-slate-900 outline-none"
-            >
-              <option value="all">All Months</option>
-              {[
-                "January", "February", "March", "April",
-                "May", "June", "July", "August",
-                "September", "October", "November", "December",
-              ].map((name, index) => (
-                <option key={name} value={String(index + 1)}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
-              Locations shown
-            </span>
-            <p className="text-2xl font-extrabold text-slate-900">
-              {results.length}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">Demo table entries</p>
-          </div>
+          <select
+            id="history-month"
+            value={month}
+            onChange={(event) => setMonth(Number(event.target.value))}
+            className="w-full rounded-xl border border-gray-300 bg-white px-3 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          >
+            {monthOptions.map((name, index) => (
+              <option key={name} value={index + 1}>
+                {name}
+              </option>
+            ))}
+          </select>
         </div>
 
-        <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <h2 className="text-xl font-extrabold text-slate-900">
-              Results table
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Previous result and today's published result.
-            </p>
-          </div>
+        <div>
+          <label
+            htmlFor="history-year"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
+            Select year
+          </label>
 
-          <div className="relative w-full sm:max-w-xs">
-            <Search
-              size={17}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-            />
+          <select
+            id="history-year"
+            value={year}
+            onChange={(event) => setYear(Number(event.target.value))}
+            className="w-full rounded-xl border border-gray-300 bg-white px-3 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          >
+            {Array.from(
+              { length: Math.max(1, today.getFullYear() - 1999) },
+              (_, index) => today.getFullYear() - index
+            ).map((itemYear) => (
+              <option key={itemYear} value={itemYear}>
+                {itemYear}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="history-search"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
+            Search location
+          </label>
+
+          <div className="flex items-center gap-2 rounded-xl border border-gray-300 px-3 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100">
+            <Search size={18} className="shrink-0 text-gray-400" />
             <input
+              id="history-search"
+              type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search location..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+              className="min-w-0 w-full border-0 bg-transparent py-3 text-sm outline-none focus:ring-0"
             />
           </div>
         </div>
+      </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-soft">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="font-semibold text-gray-900">
+            Published Results
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">
+            {loading
+              ? "Loading records..."
+              : `${filteredResults.length} records found`}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setMonth((current) => current);
+            setYear((current) => current);
+          }}
+          className="hidden items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-50 sm:flex"
+          title="Select a different month or year to refresh"
+        >
+          <RefreshCw size={15} />
+          History
+        </button>
+      </div>
+
+      {error && (
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <AlertCircle size={19} className="mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold">Could not load history</p>
+            <p className="mt-1">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-sm">
+          <RefreshCw
+            size={28}
+            className="mx-auto animate-spin text-indigo-600"
+          />
+          <p className="mt-3 text-sm text-gray-500">
+            Loading results from database...
+          </p>
+        </div>
+      ) : !error && groupedResults.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center">
+          <History size={32} className="mx-auto text-gray-400" />
+          <h3 className="mt-3 font-semibold text-gray-900">
+            No results found
+          </h3>
+          <p className="mt-1 text-sm text-gray-500">
+            There are no published results for this month or search.
+          </p>
+        </div>
+      ) : !error ? (
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] table-fixed border-collapse text-center">
-              <thead>
-                <tr className="bg-slate-900 text-white">
-                  <th className="w-[42%] border-r border-slate-700 px-3 py-4 text-left text-sm font-extrabold sm:px-5">
+            <table className="w-full min-w-[680px] text-left">
+              <thead className="bg-gray-50">
+                <tr className="border-b border-gray-200">
+                  <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
                     Location
                   </th>
-                  <th className="w-[25%] border-r border-slate-700 px-2 py-4 text-sm font-extrabold">
-                    Previous
+                  <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Latest result
                   </th>
-                  <th className="w-[33%] px-2 py-4 text-sm font-extrabold">
-                    Current Result
+                  <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Previous result
+                  </th>
+                  <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Published
+                  </th>
+                  <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Records
                   </th>
                 </tr>
               </thead>
 
-              <tbody>
-                {results.map((item, index) => (
+              <tbody className="divide-y divide-gray-100">
+                {groupedResults.map((group) => (
                   <tr
-                    key={item.id}
-                    className={
-                      index % 2 === 0
-                        ? "bg-slate-100"
-                        : "bg-white"
-                    }
+                    key={group.id}
+                    className="transition hover:bg-gray-50"
                   >
-                    <td className="border border-slate-300 bg-gradient-to-b from-blue-600 to-blue-800 px-3 py-4 text-left text-white sm:px-5 sm:py-5">
-                      <p className="break-words text-sm font-extrabold sm:text-base">
-                        {item.location}
-                      </p>
-                      <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-blue-100">
-                        <Clock3 size={13} />
-                        {item.time}
-                      </p>
+                    <td className="px-5 py-4">
+                      <span className="font-semibold text-gray-900">
+                        {group.location}
+                      </span>
                     </td>
 
-                    <td className="border border-slate-300 px-2 py-5 text-2xl font-extrabold tracking-wide text-slate-900 sm:text-3xl">
-                      {item.previous}
+                    <td className="px-5 py-4">
+                      <span className="inline-flex min-w-12 items-center justify-center rounded-lg bg-indigo-50 px-3 py-2 font-bold text-indigo-700">
+                        {group.latest?.number ?? "--"}
+                      </span>
                     </td>
 
-                    <td className="border border-slate-300 px-2 py-5">
-                      {item.current ? (
-                        <span className="text-2xl font-extrabold tracking-wide text-slate-900 sm:text-3xl">
-                          {item.current}
-                        </span>
-                      ) : (
-                        <span className="mx-auto inline-flex min-h-9 min-w-9 items-center justify-center rounded-full border-4 border-amber-200 bg-amber-400 px-2 text-[10px] font-black tracking-wide text-slate-950 shadow-sm">
-                          WAIT
-                        </span>
-                      )}
+                    <td className="px-5 py-4">
+                      <span className="inline-flex min-w-12 items-center justify-center rounded-lg bg-gray-100 px-3 py-2 font-semibold text-gray-700">
+                        {group.previous?.number ?? "--"}
+                      </span>
+                    </td>
+
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Clock3 size={15} className="shrink-0 text-gray-400" />
+                        <div>
+                          <div>{formatTime(group.latest?.publishedAt)}</div>
+                          <div className="mt-1 text-xs text-gray-400">
+                            {formatDate(group.latest?.publishedAt)}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-5 py-4">
+                      <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+                        {group.total}
+                      </span>
                     </td>
                   </tr>
                 ))}
-
-                {results.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan="3"
-                      className="border border-slate-200 px-4 py-12 text-center"
-                    >
-                      <p className="font-bold text-slate-800">
-                        No locations found
-                      </p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Try a different location name.
-                      </p>
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
         </div>
+      ) : null}
 
-        <div className="mt-5 flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4">
-          <Clock3 size={19} className="mt-0.5 shrink-0 text-blue-600" />
-          <p className="text-sm leading-6 text-blue-900">
-            <strong>Waiting:</strong> The next result is not published yet.
-            Its number is intentionally hidden from public visitors.
-          </p>
-        </div>
-
-        <p className="mt-5 text-center text-xs text-slate-400">
-          Demo entries are illustrative. Live records and month filtering will
-          be connected to the database in the backend integration step.
-        </p>
-      </div>
-    </div>
+      <p className="mt-4 text-xs text-gray-400">
+        History includes results published during the selected month.
+      </p>
+    </section>
   );
 }
 

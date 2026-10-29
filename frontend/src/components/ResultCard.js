@@ -27,7 +27,11 @@ function ResultCard({ result, type = "current" }) {
                 : "bg-emerald-50 text-emerald-700"
             }`}
           >
-            {isWaiting ? <Clock3 size={14} /> : <CheckCircle2 size={14} />}
+            {isWaiting ? (
+              <Clock3 size={14} />
+            ) : (
+              <CheckCircle2 size={14} />
+            )}
             {isWaiting ? "WAITING" : "CURRENT RESULT"}
           </span>
 
@@ -36,9 +40,16 @@ function ResultCard({ result, type = "current" }) {
           </span>
         </div>
 
-        <div className="mt-6 flex items-center gap-2 text-sm font-medium text-slate-500">
-          <MapPin size={16} className="text-blue-600" />
-          {result?.locationName || "Location"}
+        {/* Location - Highlighted */}
+        <div className="mt-6 flex items-center gap-2">
+          <MapPin
+            size={20}
+            className="shrink-0 text-blue-600"
+          />
+
+          <span className="text-xl font-extrabold tracking-wide text-slate-900 sm:text-2xl">
+            {result?.locationName || "Location"}
+          </span>
         </div>
 
         {isWaiting ? (
@@ -46,6 +57,7 @@ function ResultCard({ result, type = "current" }) {
             <p className="text-2xl font-extrabold tracking-tight text-amber-700">
               Waiting
             </p>
+
             <p className="mt-1 text-sm text-amber-700/80">
               Next result has not been published yet.
             </p>
@@ -55,6 +67,7 @@ function ResultCard({ result, type = "current" }) {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
               Result number
             </p>
+
             <p className="mt-1 text-5xl font-extrabold tracking-tight text-slate-900">
               {result?.number ?? "--"}
             </p>

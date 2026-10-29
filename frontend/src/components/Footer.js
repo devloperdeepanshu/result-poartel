@@ -10,7 +10,7 @@ function Footer() {
             Result<span className="text-blue-600">Board</span>
           </p>
           <p className="mt-1 text-sm text-slate-500">
-            Current results, waiting updates and monthly history.
+            !! DISCLAIMER - A7 Satta is a non-commercial informational website. Please view this site at your own risk, All The Information Shown On Website Is Sponsored And We Warn You That satta matka Gambling/Satta May Be Banned Or Illegal In Your Country. We Are Not Responsible For Any Issues Or Scam..., We Respect All Country Rules/Laws... If You Not Agree With Our Site disclaimer Please Quit Our Site Right Now. Thank You.
           </p>
         </div>
 
