@@ -13,7 +13,7 @@ import {
 import { motion } from "framer-motion";
 import ResultCard from "../components/ResultCard";
 import api from "../services/api";
-
+import MonthlyHistory from "./MonthlyHistory";
 const khaiwalLocations = [
   { name: "अलीगढ़ सिटी", time: "12:50 PM" },
   { name: "दिल्ली सवेरा", time: "2:00 PM" },
@@ -25,7 +25,7 @@ const khaiwalLocations = [
   { name: "फरीदाबाद", time: "5:50 PM" },
   { name: "लाल मीनार", time: "7:00 PM" },
   { name: "अलवर", time: "7:20 PM" },
-  { name: "कानपुर सिटी", time: "8:10 PM" },
+
   { name: "गाज़ियाबाद", time: "9:20 PM" },
   { name: "स टारका", time: "10:20 PM" },
 ];
@@ -309,6 +309,9 @@ function Home() {
               <MessageCircle size={18} />
               Open WhatsApp
             </a>
+          </div>
+          <div className="mt-4 text-sm text-slate-500"> 
+          <MonthlyHistory/>
           </div>
         </div>
       </section>
