@@ -15,20 +15,21 @@ import ResultCard from "../components/ResultCard";
 import api from "../services/api";
 import MonthlyHistory from "./MonthlyHistory";
 const khaiwalLocations = [
-  { name: "अलीगढ़ सिटी", time: "12:50 PM" },
-  { name: "दिल्ली सवेरा", time: "2:00 PM" },
-  { name: "ग्वालियर", time: "2:20 PM" },
-  { name: "दिल्ली बाजार", time: "2:50 PM" },
-  { name: "दिल्ली मटका", time: "3:20 PM" },
-  { name: "श्री गणेश", time: "4:20 PM" },
-  { name: "आगरा", time: "5:20 PM" },
-  { name: "फरीदाबाद", time: "5:50 PM" },
-  { name: "लाल मीनार", time: "7:00 PM" },
-  { name: "अलवर", time: "7:20 PM" },
-  { name: "गाज़ियाबाद", time: "9:20 PM" },
-  { name: "द्वारका", time: "10:20 PM" },
+  { name: "अलीगढ़ सिटी", time: "12:55 PM" },
+  { name: "सदर बाजार", time: "01:25 PM" },
+  { name: "दिल्ली सवेरा", time: "02:10 PM" },
+  { name: "ग्वालियर", time: "02:25 PM" },
+  { name: "दिल्ली बाजार", time: "02:55 PM" },
+  { name: "दिल्ली मटका", time: "03:30 PM" },
+  { name: "श्री गणेश", time: "04:20 PM" },
+  { name: "आगरा", time: "05:20 PM" },
+  { name: "फरीदाबाद", time: "05:55 PM" },
+  { name: "लाल मीनार", time: "06:55 PM" },
+  { name: "अलवर", time: "07:30 PM" },
+  { name: "गाज़ियाबाद", time: "09:30 PM" },
+  { name: "द्वारका", time: "10:30 PM" },
   { name: "गली", time: "11:30 PM" },
-  { name: "दिसावर", time: "1:00 AM" },
+  { name: "दिसावर", time: "01:00 AM" },
 ];
 
 function Home() {
