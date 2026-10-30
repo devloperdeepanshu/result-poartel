@@ -301,7 +301,7 @@ function Home() {
             </div>
 
             <a
-              href="https://wa.me/"
+              href="https://wa.me/918930430170"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
