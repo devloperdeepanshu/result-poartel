@@ -25,9 +25,10 @@ const khaiwalLocations = [
   { name: "फरीदाबाद", time: "5:50 PM" },
   { name: "लाल मीनार", time: "7:00 PM" },
   { name: "अलवर", time: "7:20 PM" },
-
   { name: "गाज़ियाबाद", time: "9:20 PM" },
-  { name: "स टारका", time: "10:20 PM" },
+  { name: "द्वारका", time: "10:20 PM" },
+  { name: "गली", time: "11:30 PM" },
+  { name: "दिसावर", time: "1:00 AM" },
 ];
 
 function Home() {
