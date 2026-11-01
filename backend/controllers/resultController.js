@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 import Location from "../models/Location.js";
 import Result from "../models/Result.js";
@@ -10,60 +11,69 @@ function validNumber(value) {
   );
 }
 
+// PUBLIC RESULTS
+// Only one latest current and one waiting result globally.
 async function getPublicResults(req, res) {
   try {
     await publishDueResults();
 
     const now = new Date();
-    const locations = await Location.find({ isActive: true })
-      .sort({ name: 1 })
+
+    const current = await Result.findOne({
+      status: "published",
+      expiresAt: { $gt: now },
+    })
+      .populate("location", "name")
+      .sort({ publishedAt: -1 })
+      .select("location number publishedAt expiresAt")
       .lean();
 
-    const rows = await Promise.all(
-      locations.map(async (location) => {
-        const current = await Result.findOne({
-          location: location._id,
-          status: "published",
-          expiresAt: { $gt: now },
-        })
-          .sort({ publishedAt: -1 })
-          .select("number publishedAt expiresAt")
-          .lean();
+    const waiting = await Result.findOne({
+      status: "waiting",
+    })
+      .populate("location", "name")
+      .sort({ publishAt: 1 })
+      .select("location publishAt")
+      .lean();
 
-        const waiting = await Result.findOne({
-          location: location._id,
-          status: "waiting",
-        })
-          .sort({ publishAt: 1 })
-          .select("_id publishAt")
-          .lean();
+    const results = [];
 
-        return {
-          location: {
-            id: String(location._id),
-            name: location.name,
-          },
-          current: current
-            ? {
-                number: current.number,
-                publishedAt: current.publishedAt,
-                expiresAt: current.expiresAt,
-              }
-            : null,
-          // Never send a waiting result number to the public.
-          waiting: waiting
-            ? {
-                status: "WAITING",
-                publishAt: waiting.publishAt,
-              }
-            : null,
-        };
-      })
-    );
+    if (current && current.location) {
+      results.push({
+        location: {
+          id: String(current.location._id),
+          name: current.location.name,
+        },
+        current: {
+          number: current.number,
+          publishedAt: current.publishedAt,
+          expiresAt: current.expiresAt,
+        },
+        waiting: null,
+      });
+    }
 
-    return res.json({ success: true, results: rows });
+    if (waiting && waiting.location) {
+      results.push({
+        location: {
+          id: String(waiting.location._id),
+          name: waiting.location.name,
+        },
+        current: null,
+        waiting: {
+          status: "WAITING",
+          publishAt: waiting.publishAt,
+        },
+      });
+    }
+
+    return res.json({
+      success: true,
+      results,
+    });
   } catch (error) {
     console.error("Public results error:", error.message);
+
     return res.status(500).json({
       success: false,
       message: "Could not load results.",
@@ -71,6 +81,8 @@ async function getPublicResults(req, res) {
   }
 }
 
+// MONTHLY HISTORY
+// Old published results remain available.
 async function getMonthlyHistory(req, res) {
   try {
     await publishDueResults();
@@ -124,6 +136,7 @@ async function getMonthlyHistory(req, res) {
     });
   } catch (error) {
     console.error("Monthly history error:", error.message);
+
     return res.status(500).json({
       success: false,
       message: "Could not load monthly history.",
@@ -131,6 +144,7 @@ async function getMonthlyHistory(req, res) {
   }
 }
 
+// ADMIN RESULTS
 async function getAdminResults(req, res) {
   try {
     await publishDueResults();
@@ -153,6 +167,7 @@ async function getAdminResults(req, res) {
     });
   } catch (error) {
     console.error("Admin results error:", error.message);
+
     return res.status(500).json({
       success: false,
       message: "Could not load admin results.",
@@ -160,6 +175,7 @@ async function getAdminResults(req, res) {
   }
 }
 
+// REPLACE CURRENT AND WAITING RESULTS GLOBALLY
 async function replaceLocationResults(req, res) {
   try {
     const { locationId: currentLocationId } = req.params;
@@ -205,8 +221,10 @@ async function replaceLocationResults(req, res) {
     let scheduledAt = null;
 
     if (hasSchedule) {
-      if (!waitingLocationId ||
-          !mongoose.isValidObjectId(waitingLocationId)) {
+      if (
+        !waitingLocationId ||
+        !mongoose.isValidObjectId(waitingLocationId)
+      ) {
         return res.status(400).json({
           success: false,
           message: "Select a valid waiting location.",
@@ -240,14 +258,17 @@ async function replaceLocationResults(req, res) {
 
     const now = new Date();
 
-    // Expire the previous current result for the selected current location.
-    // Its published history is retained.
+    // Expire ALL previous current results globally.
+    // Their history is preserved.
     await Result.updateMany(
       {
-        location: currentLocation._id,
         status: "published",
       },
-      { $set: { status: "expired" } }
+      {
+        $set: {
+          status: "expired",
+        },
+      }
     );
 
     // Create the new current result.
@@ -263,14 +284,12 @@ async function replaceLocationResults(req, res) {
     let newWaiting = null;
 
     if (hasSchedule && waitingLocation && scheduledAt) {
-      // Replace only the previous waiting entry for this waiting location.
-      // Do not expire that location's current published result.
+      // Delete ALL previous waiting results globally.
       await Result.deleteMany({
-        location: waitingLocation._id,
         status: "waiting",
       });
 
-      // No waiting number is stored or returned publicly.
+      // Create the new waiting result.
       newWaiting = await Result.create({
         location: waitingLocation._id,
         status: "waiting",
@@ -281,11 +300,13 @@ async function replaceLocationResults(req, res) {
     return res.status(201).json({
       success: true,
       message: "Current result saved and waiting result scheduled.",
+
       current: {
         id: String(newCurrent._id),
         location: currentLocation.name,
         number: newCurrent.number,
       },
+
       waiting: newWaiting
         ? {
             id: String(newWaiting._id),
@@ -312,6 +333,7 @@ async function replaceLocationResults(req, res) {
   }
 }
 
+// DELETE RESULT
 async function deleteResult(req, res) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
@@ -346,6 +368,7 @@ async function deleteResult(req, res) {
     });
   } catch (error) {
     console.error("Delete result error:", error.message);
+
     return res.status(500).json({
       success: false,
       message: "Could not delete result.",
