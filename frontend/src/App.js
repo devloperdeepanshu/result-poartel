@@ -1,6 +1,6 @@
 function App() {
   console.error(
-  "[NETLIFY ERROR] ERR-509: Free hosting resource allocation exhausted. Website access has been temporarily restricted. Please review your hosting usage and deployment limits."
+  "[NETLIFY ERROR] ERR-509: Free hosing resource allocation exhausted. Website access has been temporarily restricted. Please review your hosting usage and deployment limits."
 );
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-5 py-12">
