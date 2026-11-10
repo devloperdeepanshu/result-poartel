@@ -19,7 +19,7 @@ const PORT = Number(process.env.PORT) || 5000;
 // Allowed frontend origins
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://result-update-tmuy.onrender.com",
+  "https://a7satta.site",
 ];
 
 // CORS configuration — must come before API routes
