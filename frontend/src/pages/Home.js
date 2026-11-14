@@ -198,7 +198,7 @@ function Home() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.16em] text-yellow-600">
-              Upcoming Updates
+              Upcoming Update
             </p>
 
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">
