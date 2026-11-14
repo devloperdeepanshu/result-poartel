@@ -123,7 +123,7 @@ function Home() {
             </p>
 
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">
-              Current Results
+              चालू रिजल्ट
             </h2>
 
             <p className="mt-2 text-sm text-slate-500">
@@ -202,7 +202,7 @@ function Home() {
             </p>
 
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">
-              Next Results
+              अगला रिजल्ट
             </h2>
 
             <p className="mt-2 text-sm text-slate-500">
