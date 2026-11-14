@@ -1,19 +1,17 @@
 
-import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ArrowRight,
   CalendarDays,
-  ChartNoAxesCombined,
-  RefreshCw,
-  MessageCircle,
   Clock3,
+  MessageCircle,
+  RefreshCw,
   Users,
 } from "lucide-react";
-import { motion } from "framer-motion";
+
 import ResultCard from "../components/ResultCard";
 import api from "../services/api";
 import MonthlyHistory from "./MonthlyHistory";
+
 const khaiwalLocations = [
   { name: "अलीगढ़ सिटी", time: "12:55 PM" },
   { name: "सदर बाजार", time: "01:25 PM" },
@@ -36,12 +34,25 @@ function Home() {
   const [currentResults, setCurrentResults] = useState([]);
   const [waitingResults, setWaitingResults] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  const loadResults = useCallback(async () => {
-    try {
-      setError("");
+  const requestInProgress = useRef(false);
 
+  const loadResults = useCallback(async (silent = false) => {
+    if (requestInProgress.current) {
+      return;
+    }
+
+    requestInProgress.current = true;
+
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
       const response = await api.get("/results/current");
       const rows = response.data.results || [];
 
@@ -74,38 +85,47 @@ function Home() {
 
       setCurrentResults(current);
       setWaitingResults(waiting);
+      setError("");
     } catch (requestError) {
       setError(
         requestError.response?.data?.message ||
           "Results load nahi ho paaye. Please try again."
       );
     } finally {
+      requestInProgress.current = false;
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
     loadResults();
 
-    const intervalId = window.setInterval(loadResults, 30000);
+    const intervalId = window.setInterval(() => {
+      loadResults(true);
+    }, 30000);
 
-    return () => window.clearInterval(intervalId);
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, [loadResults]);
 
   return (
-    <div className="min-h-screen">
-     
+    <div className="min-h-screen bg-white">
 
-      {/* CURRENT RESULTS FIRST */}
+      {/* CURRENT RESULTS */}
+
       <section className="page-container py-12 sm:py-16">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.16em] text-blue-600">
-              Live dashboard
+            <p className="text-sm font-bold uppercase tracking-[0.16em] text-yellow-600">
+              Live Dashboard
             </p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">
+
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">
               Current Results
             </h2>
+
             <p className="mt-2 text-sm text-slate-500">
               Latest published results by location.
             </p>
@@ -113,50 +133,58 @@ function Home() {
 
           <button
             type="button"
-            onClick={loadResults}
-            disabled={loading}
-            className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+            onClick={() => loadResults(true)}
+            disabled={loading || refreshing}
+            className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:border-yellow-400 hover:bg-yellow-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            {loading ? "Loading..." : "Refresh results"}
+            <RefreshCw
+              size={16}
+              className={refreshing ? "animate-spin" : ""}
+            />
+            {refreshing ? "Refreshing..." : "Refresh Results"}
           </button>
         </div>
 
         {error && (
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             <span>{error}</span>
+
             <button
               type="button"
-              onClick={loadResults}
-              className="font-bold underline"
+              onClick={() => loadResults(true)}
+              disabled={refreshing}
+              className="font-bold underline disabled:opacity-50"
             >
-              Try again
+              Try Again
             </button>
           </div>
         )}
 
         {loading ? (
-          <div className="mt-7 rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-            Loading current results...
+          <div className="mt-7 rounded-xl border border-slate-200 bg-slate-50 p-10 text-center">
+            <div className="mx-auto mb-3 h-7 w-7 animate-spin rounded-full border-2 border-yellow-400 border-t-transparent" />
+            <p className="text-sm font-medium text-slate-500">
+              Loading current results...
+            </p>
           </div>
         ) : (
           <div className="mt-7 grid grid-cols-1 gap-5 md:grid-cols-2">
-            {currentResults.map((result, index) => (
-              <motion.div
+            {currentResults.map((result) => (
+              <ResultCard
                 key={result.id}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.06 }}
-              >
-                <ResultCard result={result} type="current" />
-              </motion.div>
+                result={result}
+                type="current"
+              />
             ))}
           </div>
         )}
 
         {!loading && !error && currentResults.length === 0 && (
-          <div className="mt-7 rounded-2xl border border-slate-200 bg-white p-8 text-center">
-            <p className="font-bold text-slate-800">No current results</p>
+          <div className="mt-7 rounded-xl border border-slate-200 bg-slate-50 p-10 text-center">
+            <p className="font-bold text-black">
+              No Current Results
+            </p>
+
             <p className="mt-2 text-sm text-slate-500">
               Published results will appear here when available.
             </p>
@@ -165,48 +193,51 @@ function Home() {
       </section>
 
       {/* WAITING RESULTS */}
+
       <section className="page-container pb-14">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.16em] text-amber-600">
-              Upcoming updates
+            <p className="text-sm font-bold uppercase tracking-[0.16em] text-yellow-600">
+              Upcoming Updates
             </p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">
+
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">
               Next Results
             </h2>
+
             <p className="mt-2 text-sm text-slate-500">
               Waiting locations are shown without their unpublished numbers.
             </p>
           </div>
 
-          <div className="inline-flex w-fit items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+          <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs font-bold text-yellow-800">
             <CalendarDays size={15} />
-            Awaiting publication
+            Awaiting Publication
           </div>
         </div>
 
         {loading ? (
-          <div className="mt-7 rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+          <div className="mt-7 rounded-xl border border-slate-200 bg-slate-50 p-10 text-center text-sm text-slate-500">
             Loading waiting results...
           </div>
         ) : (
           <div className="mt-7 grid grid-cols-1 gap-5 md:grid-cols-2">
-            {waitingResults.map((result, index) => (
-              <motion.div
+            {waitingResults.map((result) => (
+              <ResultCard
                 key={result.id}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.06 }}
-              >
-                <ResultCard result={result} type="waiting" />
-              </motion.div>
+                result={result}
+                type="waiting"
+              />
             ))}
           </div>
         )}
 
         {!loading && !error && waitingResults.length === 0 && (
-          <div className="mt-7 rounded-2xl border border-amber-200 bg-white p-8 text-center">
-            <p className="font-bold text-slate-800">No waiting results</p>
+          <div className="mt-7 rounded-xl border border-slate-200 bg-slate-50 p-10 text-center">
+            <p className="font-bold text-black">
+              No Waiting Results
+            </p>
+
             <p className="mt-2 text-sm text-slate-500">
               A location will appear here when a next result is scheduled.
             </p>
@@ -214,44 +245,73 @@ function Home() {
         )}
       </section>
 
-      {/* KHAIWAL TABLE */}
+      {/* MONTHLY HISTORY */}
+
       <section className="page-container pb-14">
         <div className="mb-6">
-          <p className="text-sm font-bold uppercase tracking-[0.16em] text-emerald-700">
-            Location schedule
+          <p className="text-sm font-bold uppercase tracking-[0.16em] text-yellow-600">
+            Previous Records
           </p>
-          <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">
+
+          <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">
+            Monthly History
+          </h2>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Check previous results month by month.
+          </p>
+        </div>
+
+        <MonthlyHistory />
+      </section>
+
+      {/* KHAIWAL SCHEDULE */}
+
+      <section className="page-container pb-14">
+        <div className="mb-6">
+          <p className="text-sm font-bold uppercase tracking-[0.16em] text-yellow-600">
+            Location Schedule
+          </p>
+
+          <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-black sm:text-4xl">
             खाईवाल
           </h2>
+
           <p className="mt-2 text-sm text-slate-500">
             Online khaiwal · SYAM BHAI KHAIWAL
           </p>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft">
-          <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-soft">
+          <div className="flex items-center gap-3 border-b border-slate-200 bg-black px-5 py-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-400 text-black">
               <Users size={21} />
             </div>
+
             <div>
-              <h3 className="font-extrabold text-slate-900">
+              <h3 className="font-extrabold text-white">
                 SYAM BHAI KHAIWAL
               </h3>
-              <p className="text-xs text-slate-500">Location & timing list</p>
+
+              <p className="text-xs text-white/60">
+                Location & Timing List
+              </p>
             </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[320px] text-left">
-              <thead className="bg-white">
-                <tr className="border-b border-slate-200">
-                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
+              <thead className="bg-yellow-50">
+                <tr className="border-b border-yellow-100">
+                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider text-black">
                     S.No.
                   </th>
-                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
+
+                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider text-black">
                     Location
                   </th>
-                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
+
+                  <th className="px-5 py-4 text-xs font-bold uppercase tracking-wider text-black">
                     Time
                   </th>
                 </tr>
@@ -261,16 +321,18 @@ function Home() {
                 {khaiwalLocations.map((item, index) => (
                   <tr
                     key={item.name}
-                    className="transition hover:bg-emerald-50/50"
+                    className="transition-colors hover:bg-yellow-50"
                   >
                     <td className="px-5 py-4 text-sm font-semibold text-slate-400">
                       {String(index + 1).padStart(2, "0")}
                     </td>
-                    <td className="px-5 py-4 text-base font-bold text-slate-900">
+
+                    <td className="px-5 py-4 text-base font-bold text-black">
                       {item.name}
                     </td>
+
                     <td className="px-5 py-4">
-                      <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">
+                      <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg bg-yellow-100 px-3 py-2 text-sm font-bold text-black">
                         <Clock3 size={15} />
                         {item.time}
                       </span>
@@ -284,19 +346,21 @@ function Home() {
       </section>
 
       {/* WHATSAPP */}
+
       <section className="page-container pb-12">
-        <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-soft sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="rounded-xl border border-slate-200 bg-black p-5 shadow-soft sm:p-7">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-yellow-400 text-black">
                 <MessageCircle size={25} />
               </div>
 
               <div>
-                <h2 className="text-lg font-extrabold text-slate-900">
+                <h2 className="text-lg font-extrabold text-white">
                   Join Us on WhatsApp
                 </h2>
-                <p className="mt-1 text-sm leading-6 text-slate-500">
+
+                <p className="mt-1 text-sm leading-6 text-white/60">
                   Connect with us on WhatsApp for updates and information.
                 </p>
               </div>
@@ -306,18 +370,15 @@ function Home() {
               href="https://wa.me/918930430170"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-yellow-400 px-5 py-3 text-sm font-bold text-black transition-colors hover:bg-yellow-300"
             >
               <MessageCircle size={18} />
               Open WhatsApp
             </a>
           </div>
-          <div className="mt-4 text-sm text-slate-500"> 
-          <MonthlyHistory/>
-          </div>
         </div>
       </section>
-      
+
     </div>
   );
 }
